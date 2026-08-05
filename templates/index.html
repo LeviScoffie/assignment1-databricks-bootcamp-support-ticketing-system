@@ -197,20 +197,55 @@
     }
     dialog textarea { min-height: 80px; resize: vertical; }
     dialog .actions { display: flex; justify-content: flex-end; gap: 8px; }
-    .toast {
+    /* Centered status toast that disintegrates character-by-character.
+       --toast-color is set per-status from JS so the message carries the same
+       palette as the status badges (open=amber, in_progress=gold, resolved=green). */
+    .toast-layer {
       position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: var(--danger);
-      color: white;
-      padding: 12px 16px;
-      border-radius: 8px;
-      max-width: 360px;
-      opacity: 0;
-      transition: opacity 0.2s;
+      inset: 0;
+      display: grid;
+      place-items: center;
       pointer-events: none;
+      z-index: 100;
     }
-    .toast.show { opacity: 1; }
+    .toast {
+      padding: 20px 34px;
+      border-radius: 14px;
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      opacity: 0;
+      color: var(--toast-color, var(--text));
+      background: var(--panel);
+      border: 1px solid var(--toast-color, var(--border));
+      box-shadow: 0 24px 70px -16px color-mix(in srgb, var(--toast-color, #000) 45%, transparent);
+      /* The exit fades the shell's paint (not its opacity) so the characters
+         can keep animating on top of it while it dissolves. */
+      transition: background 0.6s ease, border-color 0.6s ease, box-shadow 0.6s ease;
+    }
+    .toast.enter { animation: toast-in 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.35) forwards; }
+    @keyframes toast-in {
+      from { opacity: 0; transform: scale(0.88) translateY(10px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .toast.leave {
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+    }
+    .toast .char { display: inline-block; white-space: pre; }
+    .toast.leave .char {
+      animation: disintegrate 0.95s cubic-bezier(0.35, 0, 0.7, 1) forwards;
+      animation-delay: var(--d);
+    }
+    @keyframes disintegrate {
+      0%   { opacity: 1; filter: blur(0);   transform: translate(0, 0) rotate(0) scale(1); }
+      100% { opacity: 0; filter: blur(7px); transform: translate(var(--dx), var(--dy)) rotate(var(--r)) scale(0.55); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .toast.enter { animation-duration: 0.01s; }
+      .toast.leave .char { animation: none; opacity: 0; transition: opacity 0.3s; }
+    }
   </style>
 </head>
 <body>
@@ -253,7 +288,7 @@
     </form>
   </dialog>
 
-  <div class="toast" id="toast"></div>
+  <div class="toast-layer"><div class="toast" id="toast"></div></div>
 
   <script>
     const STATUSES = ["open", "in_progress", "resolved"];
@@ -264,10 +299,37 @@
     const $toast = document.getElementById("toast");
     const $dialog = document.getElementById("new-ticket-dialog");
 
-    function toast(msg) {
-      $toast.textContent = msg;
-      $toast.classList.add("show");
-      setTimeout(() => $toast.classList.remove("show"), 3000);
+    // Toast colors mirror the status badges so a status message reads as the
+    // same "thing" the badge represents. Anything else falls back to danger red.
+    const TOAST_COLORS = {
+      open: "var(--open)",
+      in_progress: "var(--in_progress)",
+      resolved: "var(--resolved)",
+      error: "var(--danger)",
+    };
+    let toastTimer = null;
+
+    function toast(msg, kind = "error") {
+      clearTimeout(toastTimer);
+
+      // Reset, then force a reflow so re-triggering the entrance animation
+      // works even if a previous toast is still on screen.
+      $toast.className = "toast";
+      $toast.style.setProperty("--toast-color", TOAST_COLORS[kind] || TOAST_COLORS.error);
+
+      // Each character becomes its own span with a randomized drift vector, so
+      // the exit reads as the text breaking apart rather than a uniform fade.
+      $toast.innerHTML = [...msg].map((ch, i) => {
+        const delay = (i * 15 + Math.random() * 100).toFixed(0);
+        const dx = (Math.random() * 70 - 35).toFixed(1);
+        const dy = (-35 - Math.random() * 55).toFixed(1);
+        const rot = (Math.random() * 60 - 30).toFixed(1);
+        return `<span class="char" style="--d:${delay}ms;--dx:${dx}px;--dy:${dy}px;--r:${rot}deg">${escapeHtml(ch)}</span>`;
+      }).join("");
+
+      void $toast.offsetWidth; // flush pending style changes before animating
+      $toast.classList.add("enter");
+      toastTimer = setTimeout(() => $toast.classList.add("leave"), 1500);
     }
 
     async function api(path, options = {}) {
@@ -372,10 +434,10 @@
             method: "PATCH",
             body: JSON.stringify({ status: newStatus }),
           });
-          toast(`Status set to "${newStatus.replace("_", " ")}"`);
+          toast(`Status set to ${newStatus.replace("_", " ")}`, newStatus);
           loadTickets();
         } catch (err) {
-          toast(`Failed: ${err.message}`);
+          toast(`Failed: ${err.message}`, "error");
           e.target.value = ticket.status;
         }
       });
