@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Internal Support Tickets</title>
+  <title>Internal Support Ticket System</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -130,6 +130,9 @@
       white-space: nowrap;
       line-height: 1;
     }
+    /* The emoji carries no side bearing, and the h1's negative tracking pulls
+       the next letter into it — so the gap has to be explicit, not a space. */
+    header h1 .mark { margin-right: 9px; letter-spacing: 0; }
     .stats { display: flex; align-items: center; gap: 8px; flex: 1; overflow-x: auto; scrollbar-width: none; }
     .stats::-webkit-scrollbar { display: none; }
     .stat {
@@ -408,7 +411,7 @@
 </head>
 <body>
   <header>
-    <h1>🎫 Tickets on Lakebase</h1>
+    <h1><span class="mark" aria-hidden="true">🎫</span>Internal Support Ticket System</h1>
     <div class="stats" id="stats"></div>
     <span class="user" id="user-email"></span>
     <button class="primary" id="new-ticket-btn">+ New Ticket</button>
