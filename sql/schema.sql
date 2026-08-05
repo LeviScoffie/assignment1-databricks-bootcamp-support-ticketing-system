@@ -1,0 +1,18 @@
+-- Lakebase schema for the support-ticketing system.
+--
+-- YOUR task. Define two related tables (Postgres dialect — Lakebase is
+-- Postgres-compatible):
+--
+--   tickets:         ticket_id, title, status, created_by, created_at
+--   ticket_messages: message_id, ticket_id, message_text, author, created_at
+--
+-- Requirements:
+--   * ticket_messages.ticket_id MUST reference tickets.ticket_id (FOREIGN KEY).
+--
+-- Design decisions that are yours to make:
+--   * Primary key type: GENERATED ... AS IDENTITY (serial) vs UUID.
+--   * How to constrain `status` (CHECK IN (...) vs a Postgres enum type).
+--   * created_at default (e.g. DEFAULT now()).
+--   * ON DELETE behavior for the FK (CASCADE? RESTRICT?).
+--
+-- Write your CREATE TABLE statements below.

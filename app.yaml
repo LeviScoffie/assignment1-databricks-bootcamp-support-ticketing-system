@@ -1,0 +1,11 @@
+# Databricks Apps configuration.
+# Databricks runs `command` to start the app. It must bind 0.0.0.0 and the
+# port Databricks exposes (Apps default is 8000). Verify against current
+# Databricks Apps docs before deploying.
+command:
+  - uvicorn
+  - app.main:app
+  - "--host"
+  - "0.0.0.0"
+  - "--port"
+  - "8000"

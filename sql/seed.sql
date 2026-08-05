@@ -1,0 +1,11 @@
+-- Sample data for the support-ticketing system.
+--
+-- YOUR task. Insert enough data to satisfy the assignment:
+--   * At least 3 tickets.
+--   * At least 2 messages per ticket.
+--   * At least 2 distinct statuses (e.g. open, in_progress, resolved).
+--
+-- Tip: if you used IDENTITY/serial primary keys, insert the tickets first,
+-- then reference their ids when inserting messages.
+--
+-- Write your INSERT statements below.

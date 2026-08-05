@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+psycopg[binary]
+databricks-sdk
+jinja2
+python-multipart
