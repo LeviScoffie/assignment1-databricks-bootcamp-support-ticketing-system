@@ -1,18 +1,16 @@
 # Databricks Apps deployment config.
 #
-# `command` starts the FastAPI app. Databricks Apps expose it on port 8000.
+# `command` starts the app. We run app.py directly; app.py boots uvicorn.
 command:
-  - uvicorn
-  - app:app
-  - "--host"
-  - "0.0.0.0"
-  - "--port"
-  - "8000"
+  - "python"
+  - "app.py"
 
-# LAKEBASE_URL is injected from the Databricks secret created by
-# setup_secrets.py (scope "support-ticketing", key "lakebase-url"). Configure a
-# secret resource on the app pointing at that scope/key and expose it here.
-# Verify the exact resource/valueFrom syntax against current Databricks Apps docs.
+# The app is told WHERE its secret lives (scope + key), not the secret value.
+# At runtime it reads the connection URL from the Databricks secret
+# database/lakebase-url (created by setup_secrets.py). The URL itself never
+# lives in the app's config or environment.
 env:
-  - name: LAKEBASE_URL
-    valueFrom: lakebase-url
+  - name: LAKEBASE_SECRET_SCOPE
+    value: "database"
+  - name: LAKEBASE_SECRET_KEY
+    value: "lakebase-url"

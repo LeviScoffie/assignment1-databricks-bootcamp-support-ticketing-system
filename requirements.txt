@@ -1,8 +1,4 @@
-fastapi
-uvicorn[standard]
-sqlalchemy
-psycopg2-binary
-python-dotenv
-databricks-sdk
-jinja2
-python-multipart
+flask
+sqlalchemy>=2.0.30
+psycopg2-binary>=2.9.9
+databricks-sdk>=0.30.0
