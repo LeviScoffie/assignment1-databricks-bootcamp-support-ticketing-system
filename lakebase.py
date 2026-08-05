@@ -2,7 +2,7 @@
 Lakebase (Databricks-managed Postgres) connection helper.
 
 Reads the connection URL from a Databricks secret (scope/key, defaults
-database/lakebase-url) at runtime and decodes it. The secret holds a standard
+assignment1-support-tickets/lakebase-url) at runtime and decodes it. The secret holds a standard
 Postgres connection URL, e.g.
     postgresql://role:password@host:5432/databricks_postgres?sslmode=require
 pointing at a native Postgres role with a static, non-expiring password. This
@@ -20,7 +20,7 @@ from sqlalchemy import create_engine
 
 _w = WorkspaceClient()
 
-_SCOPE = os.environ.get("LAKEBASE_SECRET_SCOPE", "database")
+_SCOPE = os.environ.get("LAKEBASE_SECRET_SCOPE", "assignment1-support-tickets")
 _KEY = os.environ.get("LAKEBASE_SECRET_KEY", "lakebase-url")
 
 

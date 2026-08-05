@@ -1,6 +1,6 @@
 """Apply schema.sql then seed.sql to the Lakebase database.
 
-Run locally once the `database/lakebase-url` secret exists and you are
+Run locally once the `assignment1-support-tickets/lakebase-url` secret exists and you are
 authenticated to Databricks:
 
     python init_db.py

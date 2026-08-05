@@ -26,7 +26,7 @@ Browser (UI)                          Databricks Secrets
 ```
 
 `lakebase.py` fetches the Postgres connection URL from a Databricks **secret**
-(`database/lakebase-url`) at runtime and base64-decodes it — the live credential
+(`assignment1-support-tickets/lakebase-url`) at runtime and base64-decodes it — the live credential
 never lives in the app's environment. Helper API: `run_query` (read),
 `run_write` (write), `get_connection` (a psycopg2 connection for
 `INSERT ... RETURNING`).
@@ -95,7 +95,7 @@ See [sql/schema.sql](sql/schema.sql) and [sql/seed.sql](sql/seed.sql).
 | `sql/schema.sql` | DDL for `tickets` + `ticket_messages` (FK, ENUM, UUID PKs) |
 | `sql/seed.sql` | 3 tickets, 2–3 messages each, all 3 statuses, guarded against duplicate seeding |
 | `init_db.py` | Applies `schema.sql` then `seed.sql` in one transaction |
-| `setup_secrets.py` | Interactive one-time: prompt for Lakebase URL, store as `database/lakebase-url` |
+| `setup_secrets.py` | Interactive one-time: prompt for Lakebase URL, store as `assignment1-support-tickets/lakebase-url` |
 | `app.yaml` | Databricks Apps deploy config (`python app.py` + secret-pointer env vars) |
 | `requirements.txt` | Python dependencies |
 
