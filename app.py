@@ -15,6 +15,7 @@ import os
 
 from databricks.sdk import WorkspaceClient
 from flask import Flask, jsonify, render_template, request
+from werkzeug.exceptions import HTTPException
 
 import lakebase
 
@@ -50,11 +51,14 @@ def _current_user_email() -> str:
 @app.errorhandler(Exception)
 def handle_exception(err):
     """Return JSON for any unhandled error so clients never get an HTML page."""
+    # HTTP errors (404, 405, ...) are routine — log a one-liner, not a stack
+    # trace. Only genuine unhandled exceptions warrant the full traceback.
+    if isinstance(err, HTTPException):
+        logger.info(f"{err.code} {request.method} {request.path}")
+        return jsonify({"error": err.description}), err.code
+
     logger.exception("Unhandled exception while processing request")
-    status_code = getattr(err, "code", 500)
-    if not isinstance(status_code, int):
-        status_code = 500
-    return jsonify({"error": str(err)}), status_code
+    return jsonify({"error": str(err)}), 500
 
 
 @app.route("/healthz")
