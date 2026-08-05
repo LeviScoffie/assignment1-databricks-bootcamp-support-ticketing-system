@@ -1,22 +1,24 @@
--- Lakebase schema for the support-ticketing system (Postgres dialect).
---
--- YOUR task: define two related tables that satisfy both the assignment and
--- the app's queries in app.py.
---
---   tickets:         ticket_id, title, status, created_by, created_at
---   ticket_messages: message_id, ticket_id, message_text, author, created_at
---
--- Hard requirements:
---   * ticket_messages.ticket_id MUST reference tickets.ticket_id (FOREIGN KEY).
---   * ticket_id and message_id must be DB-GENERATED (IDENTITY/serial or a UUID
---     DEFAULT) — app.py runs INSERT ... RETURNING and never supplies them.
---   * created_at needs DEFAULT now() — app.py never supplies it either.
---   * status values the app uses: 'open', 'in_progress', 'resolved'.
---
--- Design decisions that are yours:
---   * PK type: GENERATED ALWAYS AS IDENTITY vs UUID DEFAULT gen_random_uuid().
---   * Constrain `status` with a CHECK (... IN ...) vs a Postgres ENUM type.
---   * FK ON DELETE behaviour (CASCADE deletes a ticket's messages with it;
---     RESTRICT blocks deleting a ticket that still has messages).
---
--- TODO(human): write the CREATE TABLE statements below.
+
+DO $$ BEGIN
+    CREATE TYPE issue_status AS ENUM ('open', 'in_progress', 'resolved');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS tickets (
+ticket_id UUID PRIMARY KEY DEFAULT gen_random_uuid()
+, title VARCHAR(255) NOT NULL 
+, status issue_status DEFAULT 'open' NOT NULL
+, created_by TEXT NOT NULL DEFAULT 'unknown'
+, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ticket_messages ( 
+    message_id UUID PRIMARY KEY DEFAULT gen_random_uuid()
+    , ticket_id UUID NOT NULL
+    , message_text TEXT NOT NULL
+    , author TEXT NOT NULL DEFAULT 'unknown'
+    , created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+    ,CONSTRAINT fk_tickets
+        FOREIGN KEY(ticket_id)
+        REFERENCES tickets(ticket_id)
+        ON DELETE CASCADE);
