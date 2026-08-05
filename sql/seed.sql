@@ -5,13 +5,13 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM tickets) THEN
 
         WITH new_tickets AS (
-            INSERT INTO tickets (title, status, created_by) VALUES
+            INSERT INTO tickets (title, status, priority, created_by) VALUES
                 ('Cannot log in to Databricks workspace',
-                    'open',        'alice@example.com'),
+                    'open',        'urgent', 'alice@example.com'),
                 ('Lakebase connection times out from Databricks App',
-                    'in_progress', 'bob@example.com'),
+                    'in_progress', 'high',   'bob@example.com'),
                 ('How do I schedule a Delta Live Tables job?',
-                    'resolved',    'carol@example.com')
+                    'resolved',    'low',    'carol@example.com')
             RETURNING ticket_id, title
         )
         INSERT INTO ticket_messages (ticket_id, message_text, author)
