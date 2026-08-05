@@ -1,6 +1,7 @@
 """Apply schema.sql then seed.sql to the Lakebase database.
 
-Run locally once `lakebase.get_engine()` is implemented and LAKEBASE_URL is set:
+Run locally once the `database/lakebase-url` secret exists and you are
+authenticated to Databricks:
 
     python init_db.py
 """
@@ -12,17 +13,12 @@ SQL_DIR = pathlib.Path(__file__).resolve().parent / "sql"
 
 
 def main() -> None:
-    # Use the raw DBAPI (psycopg2) connection so a whole multi-statement .sql
-    # file runs in one execute() call.
-    raw = lakebase.get_engine().raw_connection()
-    try:
-        cur = raw.cursor()
-        for name in ("schema.sql", "seed.sql"):
-            cur.execute((SQL_DIR / name).read_text())
-            print(f"applied {name}")
-        raw.commit()
-    finally:
-        raw.close()
+    with lakebase.get_connection() as conn:
+        with conn.cursor() as cur:
+            for name in ("schema.sql", "seed.sql"):
+                cur.execute((SQL_DIR / name).read_text())
+                print(f"applied {name}")
+        conn.commit()
     print("done")
 
 

@@ -12,7 +12,7 @@ import os
 
 from databricks.sdk import WorkspaceClient
 
-SCOPE = "support-ticketing"
+SCOPE = "database"
 KEY = "lakebase-url"
 
 
