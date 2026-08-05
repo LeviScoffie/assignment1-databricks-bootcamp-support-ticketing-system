@@ -1,6 +1,7 @@
 # Databricks Apps deployment config.
 #
-# `command` starts the app. We run app.py directly; app.py boots uvicorn.
+# `command` starts the app. We run app.py directly; app.py starts Flask on
+# the port Databricks provides via DATABRICKS_APP_PORT.
 command:
   - "python"
   - "app.py"
