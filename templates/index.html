@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tickets on Lakebase</title>
+  <title>Internal Support Tickets</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -211,6 +211,31 @@
     }
     .chip.on.dark { background: var(--ink); color: var(--paper); }
 
+    /* Divider + archive toggle. Deliberately styled unlike .chip: a heavier
+       border and its own shadow mark it as a different axis (live vs archived),
+       not another value of Status. margin-left:auto parks it at the far end. */
+    .fdiv {
+      width: 0; align-self: stretch;
+      border-left: var(--bd-2);
+      margin-left: auto;
+    }
+    .archive-toggle {
+      font-family: 'Space Grotesk', monospace;
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border: var(--bd-3);
+      background: var(--white);
+      box-shadow: var(--sh-sm);
+      padding: 6px 12px;
+    }
+    .archive-toggle:hover { background: var(--cream); }
+    .archive-toggle[aria-pressed="true"] {
+      background: var(--ink);
+      color: var(--paper);
+    }
+
     /* ── main split ────────────────────────────────────────────────── */
     main { display: grid; grid-template-columns: 400px 1fr; flex: 1; min-height: 0; }
 
@@ -399,6 +424,13 @@
       <span class="lbl">Priority</span>
       <div class="chips" id="priority-filters"></div>
     </div>
+    <!-- Archive is not a status — it is the soft-delete flag (tickets.deleted_at).
+         It sits past a divider so it never reads as a fourth status chip. -->
+    <div class="fdiv"></div>
+    <button class="archive-toggle" id="archive-toggle"
+            aria-pressed="false" title="Show archived (soft-deleted) tickets">
+      <span aria-hidden="true">📦</span> Archived
+    </button>
   </div>
 
   <main>
@@ -482,7 +514,8 @@
     const fmtDate = iso => new Date(iso).toLocaleString(undefined,
       { dateStyle: "medium", timeStyle: "short" });
     const label = s => s.replace(/_/g, " ");
-    const short = s => ({ in_progress: "prog", medium: "med", resolved: "done" }[s] || s);
+    // Priority-only now that statuses render in full via label().
+    const short = s => ({ medium: "med" }[s] || s);
 
     function debounce(fn, ms) {
       let t;
@@ -533,8 +566,10 @@
     async function loadStats() {
       try {
         const s = await api("/stats");
-        const cells = [["total","total"],["open","open"],["in_progress","prog"],
-                       ["resolved","done"],["urgent","urgent"],["messages","msgs"],["archived","archived"]];
+        // Statuses spelled out to match the filter chips and the row badges —
+        // one name per status everywhere, so nothing has to be decoded.
+        const cells = [["total","total"],["open","open"],["in_progress","in progress"],
+                       ["resolved","resolved"],["urgent","urgent"],["messages","msgs"],["archived","archived"]];
         $stats.innerHTML = cells
           .filter(([k]) => s[k] !== undefined && !(k === "archived" && !s[k]))
           .map(([k, l]) => `<div class="stat s-${k}"><span class="n">${s[k]}</span><span class="l">${l}</span></div>`)
@@ -550,10 +585,11 @@
       const $s = document.getElementById("status-filters");
       const $p = document.getElementById("priority-filters");
 
+      // Status uses the full name — there are only three, and "prog"/"done"
+      // read as different words from the values the API actually accepts.
       $s.innerHTML =
-        `<button class="chip ${!filter.status && !filter.archived ? "on dark" : ""}" data-k="status" data-v="">All</button>` +
-        STATUSES.map(v => `<button class="chip ${filter.status === v ? "on" : ""}" data-k="status" data-v="${v}" style="--chipc: var(--${v})">${short(v)}</button>`).join("") +
-        `<button class="chip ${filter.archived ? "on dark" : ""}" data-k="archived" data-v="1">Archived</button>`;
+        `<button class="chip ${!filter.status ? "on dark" : ""}" data-k="status" data-v="">All</button>` +
+        STATUSES.map(v => `<button class="chip ${filter.status === v ? "on" : ""}" data-k="status" data-v="${v}" style="--chipc: var(--${v})">${label(v)}</button>`).join("");
 
       $p.innerHTML =
         `<button class="chip ${!filter.priority ? "on dark" : ""}" data-k="priority" data-v="">Any</button>` +
@@ -561,14 +597,19 @@
 
       document.querySelectorAll(".chip").forEach(el => el.addEventListener("click", () => {
         const { k, v } = el.dataset;
-        if (k === "archived") { filter.archived = !filter.archived; if (filter.archived) filter.status = null; }
-        else if (k === "status") { filter.status = v || null; filter.archived = false; }
-        else { filter.priority = v || null; }
+        if (k === "status") filter.status = v || null;
+        else filter.priority = v || null;
         renderFilters();
         loadTickets();
       }));
 
-      document.getElementById("list-heading").textContent = filter.archived ? "Archived" : "All Tickets";
+      // Status and archive are independent, so the toggle only reflects its own
+      // state — switching it no longer clears the status or priority filter.
+      const $a = document.getElementById("archive-toggle");
+      $a.setAttribute("aria-pressed", String(filter.archived));
+
+      document.getElementById("list-heading").textContent =
+        filter.archived ? "Archived Tickets" : "All Tickets";
     }
 
     /* ── list ─────────────────────────────────────────────────────── */
@@ -583,9 +624,19 @@
       return qs ? `/tickets?${qs}` : "/tickets";
     }
 
+    // Lakebase round-trips run ~2s from here, so two filter clicks in quick
+    // succession leave two requests in flight and they can resolve out of
+    // order. Only the newest request is allowed to paint.
+    let loadSeq = 0;
+
     async function loadTickets() {
-      try { renderList(await api(listQuery())); }
-      catch (e) { $list.innerHTML = `<div class="empty"><span class="big">⚠</span><span class="msg">${escapeHtml(e.message)}</span></div>`; }
+      const seq = ++loadSeq;
+      try {
+        const rows = await api(listQuery());
+        if (seq === loadSeq) renderList(rows);
+      } catch (e) {
+        if (seq === loadSeq) $list.innerHTML = `<div class="empty"><span class="big">⚠</span><span class="msg">${escapeHtml(e.message)}</span></div>`;
+      }
     }
 
     function renderList(tickets) {
@@ -602,7 +653,7 @@
              data-id="${escapeHtml(t.ticket_id)}">
           <div class="title">${escapeHtml(t.title)}</div>
           <div class="meta">
-            <span class="block ${t.status}">${short(t.status)}</span>
+            <span class="block ${t.status}">${label(t.status)}</span>
             <span class="block ${t.priority}">${t.priority}</span>
             <span class="when">${fmtDate(t.created_at)}</span>
           </div>
@@ -835,6 +886,14 @@
       filter.q = e.target.value.trim();
       loadTickets();
     }, 250));
+
+    // Bound once: unlike the chips, this button is static markup that
+    // renderFilters() only re-reads the state of, never re-creates.
+    document.getElementById("archive-toggle").addEventListener("click", () => {
+      filter.archived = !filter.archived;
+      renderFilters();
+      loadTickets();
+    });
 
     /* ── boot ─────────────────────────────────────────────────────── */
 
