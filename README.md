@@ -11,48 +11,58 @@ context-engineering and AI-agent projects later in the boot camp.
 Client (human UI / future AI agent)
         │  HTTP
         ▼
-FastAPI app  (app/main.py)  ──►  Lakebase / Postgres  (sql/schema.sql)
-        │                            tickets
-   app/db.py                         ticket_messages  (FK → tickets)
- (OAuth token → psycopg)
+FastAPI app  (app.py)  ──►  Lakebase / Postgres  (sql/schema.sql)
+        │                       tickets
+   lakebase.py                  ticket_messages  (FK → tickets)
+ (LAKEBASE_URL → SQLAlchemy engine, psycopg2 driver)
 ```
 
-Design principle: **API-first**. The same endpoints serve the human UI now and
-the AI agent later — business logic stays behind the API, not in templates.
+Connection design: a **single secret**, `LAKEBASE_URL` — a native Postgres role
+with a static password. Same variable locally (from `.env`) and in production
+(injected from a Databricks secret). API-first: business logic lives behind the
+API so the human UI and the future agent share one surface.
 
 ## Project structure
 
 | Path | What it is | Status |
 |---|---|---|
-| `app/main.py` | FastAPI app + routes | scaffolded |
-| `app/db.py` | Lakebase connection (OAuth token as Postgres password) | **stub — to implement** |
+| `app.py` | FastAPI app + routes | scaffolded |
+| `lakebase.py` | Connection helper (`LAKEBASE_URL`, SQLAlchemy + psycopg2) | **stub — to implement** |
 | `sql/schema.sql` | DDL for `tickets` + `ticket_messages` (FK) | **stub — to implement** |
 | `sql/seed.sql` | Sample data (3+ tickets, 2+ msgs each, 2+ statuses) | **stub — to implement** |
-| `scripts/init_db.py` | Applies schema then seed | scaffolded |
-| `app.yaml` | Databricks Apps run config | scaffolded |
-| `requirements.txt` | Python dependencies | scaffolded |
+| `init_db.py` | Applies `schema.sql` then `seed.sql` | scaffolded |
+| `setup_secrets.py` | One-time: create Databricks secret scope + store `LAKEBASE_URL` | scaffolded |
+| `app.yaml` | Databricks Apps deploy config (command + env) | scaffolded |
+| `requirements.txt` · `.env.example` · `.gitignore` | supporting files | scaffolded |
 
 ## Local development
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+cp .env.example .env          # then set LAKEBASE_URL to your Lakebase connection URL
+uvicorn app:app --reload
 ```
 
 `GET /health` works immediately. The database-backed routes work once
-`app/db.py` and the schema are implemented.
+`lakebase.py` and the schema are implemented.
 
 ## Database setup
 
-Once `app/db.py` connects:
+```bash
+python init_db.py             # applies sql/schema.sql then sql/seed.sql
+```
+
+## Secrets (for deployment)
 
 ```bash
-python -m scripts.init_db   # applies sql/schema.sql then sql/seed.sql
+export LAKEBASE_URL='postgresql://app_user:...@HOST:5432/databricks_postgres?sslmode=require'
+python setup_secrets.py       # stores it as Databricks secret support-ticketing/lakebase-url
 ```
 
 ## Deploy to Databricks Apps
 
-Provision a Lakebase database instance in the workspace, then deploy this repo
-as a Databricks App (via the Databricks CLI / workspace Git integration).
-Deployment steps to be filled in against current Databricks Apps docs.
+Provision a Lakebase database instance, run `setup_secrets.py`, then deploy this
+repo as a Databricks App (via the Databricks CLI / workspace Git integration).
+The app reads `LAKEBASE_URL` from the secret per `app.yaml`.
+```

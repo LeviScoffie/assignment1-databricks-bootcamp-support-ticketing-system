@@ -10,6 +10,7 @@ env/
 # Env / secrets — never commit connection strings or tokens
 .env
 .env.*
+!.env.example
 *.local
 
 # OS

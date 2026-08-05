@@ -1,11 +1,18 @@
-# Databricks Apps configuration.
-# Databricks runs `command` to start the app. It must bind 0.0.0.0 and the
-# port Databricks exposes (Apps default is 8000). Verify against current
-# Databricks Apps docs before deploying.
+# Databricks Apps deployment config.
+#
+# `command` starts the FastAPI app. Databricks Apps expose it on port 8000.
 command:
   - uvicorn
-  - app.main:app
+  - app:app
   - "--host"
   - "0.0.0.0"
   - "--port"
   - "8000"
+
+# LAKEBASE_URL is injected from the Databricks secret created by
+# setup_secrets.py (scope "support-ticketing", key "lakebase-url"). Configure a
+# secret resource on the app pointing at that scope/key and expose it here.
+# Verify the exact resource/valueFrom syntax against current Databricks Apps docs.
+env:
+  - name: LAKEBASE_URL
+    valueFrom: lakebase-url
