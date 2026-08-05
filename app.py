@@ -1,12 +1,13 @@
 """FastAPI entrypoint for the Lakebase support-ticketing app.
 
-API-first design: these endpoints are the surface that BOTH the human UI and
-(later in the boot camp) the AI agent will call. All operational data lives in
-Lakebase. Keep business logic here/behind the API, never in a template.
+API-first: these endpoints are the surface that BOTH the human UI and (later in
+the boot camp) the AI agent will call. All operational data lives in Lakebase.
+Deployed via Databricks Apps (see app.yaml -> `uvicorn app:app`).
 """
 from fastapi import FastAPI
+from sqlalchemy import text
 
-from app import db
+import lakebase
 
 app = FastAPI(title="Lakebase Support Ticketing")
 
@@ -14,7 +15,7 @@ app = FastAPI(title="Lakebase Support Ticketing")
 @app.get("/health")
 def health():
     """Liveness probe — intentionally does NOT touch the database, so the app
-    reports healthy even before the Lakebase connection is wired up."""
+    reports healthy even before Lakebase is wired up or has woken from idle."""
     return {"status": "ok"}
 
 
@@ -22,16 +23,16 @@ def health():
 def list_tickets():
     """Return all tickets, newest first.
 
-    Works once `db.get_connection()` is implemented and the schema exists.
+    Works once `lakebase.get_engine()` is implemented and the schema exists.
     """
-    with db.get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
+    with lakebase.get_engine().connect() as conn:
+        rows = conn.execute(
+            text(
                 "SELECT ticket_id, title, status, created_by, created_at "
                 "FROM tickets ORDER BY created_at DESC"
             )
-            rows = cur.fetchall()
-    return {"tickets": rows}
+        ).mappings().all()
+    return {"tickets": [dict(r) for r in rows]}
 
 
 # --- Endpoints to build together next -----------------------------------
