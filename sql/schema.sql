@@ -1,18 +1,22 @@
--- Lakebase schema for the support-ticketing system.
+-- Lakebase schema for the support-ticketing system (Postgres dialect).
 --
--- YOUR task. Define two related tables (Postgres dialect — Lakebase is
--- Postgres-compatible):
+-- YOUR task: define two related tables that satisfy both the assignment and
+-- the app's queries in app.py.
 --
 --   tickets:         ticket_id, title, status, created_by, created_at
 --   ticket_messages: message_id, ticket_id, message_text, author, created_at
 --
--- Requirements:
+-- Hard requirements:
 --   * ticket_messages.ticket_id MUST reference tickets.ticket_id (FOREIGN KEY).
+--   * ticket_id and message_id must be DB-GENERATED (IDENTITY/serial or a UUID
+--     DEFAULT) — app.py runs INSERT ... RETURNING and never supplies them.
+--   * created_at needs DEFAULT now() — app.py never supplies it either.
+--   * status values the app uses: 'open', 'in_progress', 'resolved'.
 --
--- Design decisions that are yours to make:
---   * Primary key type: GENERATED ... AS IDENTITY (serial) vs UUID.
---   * How to constrain `status` (CHECK IN (...) vs a Postgres enum type).
---   * created_at default (e.g. DEFAULT now()).
---   * ON DELETE behavior for the FK (CASCADE? RESTRICT?).
+-- Design decisions that are yours:
+--   * PK type: GENERATED ALWAYS AS IDENTITY vs UUID DEFAULT gen_random_uuid().
+--   * Constrain `status` with a CHECK (... IN ...) vs a Postgres ENUM type.
+--   * FK ON DELETE behaviour (CASCADE deletes a ticket's messages with it;
+--     RESTRICT blocks deleting a ticket that still has messages).
 --
--- Write your CREATE TABLE statements below.
+-- TODO(human): write the CREATE TABLE statements below.

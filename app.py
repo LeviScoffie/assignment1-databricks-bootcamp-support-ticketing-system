@@ -14,7 +14,7 @@ import logging
 import os
 
 from databricks.sdk import WorkspaceClient
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, render_template, request
 
 import lakebase
 
@@ -65,18 +65,8 @@ def healthz():
 
 @app.route("/")
 def index():
-    """Minimal API index."""
-    return jsonify(
-        {
-            "service": "support-ticketing",
-            "endpoints": [
-                "GET  /tickets",
-                "POST /tickets",
-                "GET  /tickets/<ticket_id>",
-                "POST /tickets/<ticket_id>/messages",
-            ],
-        }
-    )
+    """Serve the ticketing UI (templates/index.html)."""
+    return render_template("index.html")
 
 
 @app.route("/tickets", methods=["GET"])
@@ -133,6 +123,33 @@ def get_ticket(ticket_id):
         (ticket_id,),
     )
     return jsonify({"ticket": tickets[0], "messages": messages})
+
+
+@app.route("/tickets/<ticket_id>/status", methods=["PATCH"])
+def update_ticket_status(ticket_id):
+    """Update a ticket's status. Body: {status}.
+
+    Returns the updated ticket row (200) or 404 if the ticket doesn't exist.
+    Status must be one of VALID_STATUSES.
+    """
+    body = request.get_json(silent=True) or {}
+    status = (body.get("status") or "").strip()
+
+    if status not in VALID_STATUSES:
+        return jsonify({"error": f"status must be one of {sorted(VALID_STATUSES)}"}), 400
+
+    with lakebase.get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"UPDATE {TICKETS_TABLE} SET status = %s WHERE ticket_id = %s "
+                f"RETURNING ticket_id, title, status, created_by, created_at",
+                (status, ticket_id),
+            )
+            row = cur.fetchone()
+            conn.commit()
+    if row is None:
+        return jsonify({"error": f"ticket {ticket_id} not found"}), 404
+    return jsonify(row)
 
 
 @app.route("/tickets/<ticket_id>/messages", methods=["POST"])
