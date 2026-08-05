@@ -7,10 +7,10 @@ command:
 
 # The app is told WHERE its secret lives (scope + key), not the secret value.
 # At runtime it reads the connection URL from the Databricks secret
-# database/lakebase-url (created by setup_secrets.py). The URL itself never
-# lives in the app's config or environment.
+# assignment1-support-tickets/lakebase-url (created by setup_secrets.py). The
+# URL itself never lives in the app's config or environment.
 env:
   - name: LAKEBASE_SECRET_SCOPE
-    value: "database"
+    value: "assignment1-support-tickets"
   - name: LAKEBASE_SECRET_KEY
     value: "lakebase-url"
