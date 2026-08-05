@@ -1,4 +1,4 @@
-# Assignment 1 — Lakebase-Powered AI Support App
+# Assignment 1 — Lakebase-Powered AI Ticket Support App
 
 Day 1 boot camp homework: a small **Databricks App** (Flask) backed by
 **Lakebase** (Databricks' Postgres-compatible OLTP database). Users create
